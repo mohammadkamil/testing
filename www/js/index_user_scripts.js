@@ -206,10 +206,9 @@ var image = {
     function onPhotoURISuccess(imageURI) {
         // Uncomment to view the image file URI
         // console.log(imageURI);
-        var imageNode = $(imageID);
+        var imageNode = $("#IMAGE");
         //create photo
         var photo = 'data:image/jpeg;base64,' + imageURI;
-
         // Show the captured photo
         imageNode.attr('src', photo);
         /* button  #btnreport */
