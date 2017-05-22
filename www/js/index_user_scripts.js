@@ -10,11 +10,13 @@ var usermarkers = [];
 var latLocation, lngLocation;
 //var host = "http://localhost/bustrackingsystem/";
 var host = "http://slumberjer.com/bustrackerXDK/";
+var hostGambar = "http://slumberjer.com/bustrackerXDK/image/MissingItem/";
 var getlocation = host + "getLocation.php";
 var getlocationbyID = host + "getLocationByID.php";
 var getlocationbyroute = host + "getLocationbyRoute.php";
-var reportMissingItem=host+"reportMissingItem.php";
-
+var reportMissingItem = host + "reportMissingItem.php";
+var reportComplaint = host + "reportComplaint.php";
+var getMissingItem = host + "getMissingItem.php";
 var locationBus;
 var center;
 var content;
@@ -29,7 +31,14 @@ var image = {
     url: 'http://slumberjer.com/bustrackerXDK/image/busmarker.png', // image is 512 x 512
     scaledSize: new google.maps.Size(30, 32),
 };
-var missRouteP, MissDateP, MissTimeP, MissfromP;
+var missRouteP, MissDateP, MissTimeP, MissfromP; //report missing item variable
+var comNoMatric = null,
+    comRoute = null,
+    comDate = null,
+    comTime = null,
+    complaintreport = null,
+    comEmail = null;
+var temp;
 
 (function () {
     "use strict";
@@ -43,6 +52,7 @@ var missRouteP, MissDateP, MissTimeP, MissfromP;
         //        
         startapp();
         /* button  #menu */
+        
         $(document).on("click", "#menu", function (evt) {
             /*global uib_sb */
             /* Other possible functions are: 
@@ -51,7 +61,6 @@ var missRouteP, MissDateP, MissTimeP, MissfromP;
               uib_sb.toggle_sidebar($sb)
                uib_sb.close_all_sidebars()
              See js/sidebar.js for the full sidebar API */
-
             uib_sb.toggle_sidebar($("#slidemenu"));
             return false;
         });
@@ -77,6 +86,9 @@ var missRouteP, MissDateP, MissTimeP, MissfromP;
         $(document).on("click", "#slideMissing", function (evt) {
             /*global activate_subpage */
             uib_sb.toggle_sidebar($("#slidemenu"));
+            bootbox.alert(moment().format("HH:mm"));
+            $("#missDate").val(moment().format('YYYY-MM-DD'));
+            $("#missTime").val(moment().format("HH:mm"));
             activate_subpage("#reportmissingitem");
             return false;
         });
@@ -99,19 +111,93 @@ var missRouteP, MissDateP, MissTimeP, MissfromP;
         /* button  #btnAduansub */
         $(document).on("click", "#btnAduansub", function (evt) {
             /* your code goes here */
+            bootbox.confirm({
+                title: "Comfirmation Report?",
+                message: "Do you want to submit Report",
+                buttons: {
+                    cancel: {
+                        label: '<i class="fa fa-times"></i> Cancel'
+                    },
+                    confirm: {
+                        label: '<i class="fa fa-check"></i> Confirm'
+                    }
+                },
+                callback: function (result) {
+                    comNoMatric = $("#comNoMatric").val();
+                    comRoute = $("#comRoute").val();
+                    comDate = $("#comDate").val();
+                    comTime = $("#comTime").val();
+                    complaintreport = $("#complaintreport").val();
+                    comEmail = $("#comEmail").val();
+
+                    if (result === true) {
+                        if (comNoMatric !== "" && comRoute !== "" && comDate !== "" && comTime !== "" && complaintreport !== "") {
+                            if (checkEmail(comEmail) === true && checkNumberLenght(comNoMatric) === true) {
+                                if (localStorage.getItem("emailPassenger") === null) {
+                                    localStorage.setItem("emailPassenger", comEmail);
+                                }
+
+                                $.ajax({
+                                    //Getting the url of the uploadphp from action attr of form 
+                                    //this means currently selected element which is our form 
+                                    url: reportComplaint,
+
+                                    //For file upload we use post request
+                                    type: "POST",
+
+                                    //Creating data from form 
+                                    data: {
+                                        nomatric: comNoMatric,
+                                        comroute: comRoute,
+                                        comdate: comDate,
+                                        comtime: comTime,
+                                        comemail: comEmail,
+                                        complaint: complaintreport
+
+                                    },
+
+                                    //Setting these to false because we are sending a multipart request
+                                    contentType: "application/x-www-form-urlencoded",
+                                    cache: false,
+                                    //processData: false,
+                                    success: function (data) {
+                                        $("#comNoMatric").val("");
+                                        $("#comRoute").val("");
+                                        $("#comDate").val("");
+                                        $("#comTime").val("");
+                                        $("#complaintreport").val("");
+                                        $("#comEmail").val("");
+                                        bootbox.alert(JSON.parse(data));
+                                    },
+                                    error: function () {}
+                                });
+                            }
+
+                        } else {
+
+                            bootbox.alert("Please fill in Form");
+                        }
+                    }
+
+                }
+
+            });
+
             return false;
         });
 
         /* button  #btnSelectRoute */
         $(document).on("click", "#btnSelectRoute", function (evt) {
-            $(".uib_w_12").modal("toggle");
             clearInterval(daemon);
+            $(".uib_w_12").modal("toggle");
+
             for (var demarker = 0; demarker < markers.length; demarker++) {
                 markers[demarker].setMap(null);
 
             }
             usermarkers[0].setMap(null);
             var routre = $("#selectRoute").val();
+            bootbox.alert(routre);
             viewbusbyRoute(routre);
             return false;
         });
@@ -136,9 +222,57 @@ var missRouteP, MissDateP, MissTimeP, MissfromP;
 
             }
             usermarkers[0].setMap(null);
-            var routre = $("#selectRoute").val();
-            viewbusbyRoute(routre);
+            startapp();
             activate_subpage("#page_70_0");
+            return false;
+        });
+
+        /* button  Report Complaint */
+        $(document).on("click", ".uib_w_36", function (evt) {
+            /*global activate_subpage */
+            $("#comDate").val(moment().format('YYYY-MM-DD'));
+            $("#comTime").val(moment().format("HH:mm"));
+            uib_sb.toggle_sidebar($("#slidemenu"));
+            activate_subpage("#aduan");
+            return false;
+        });
+
+        /* button  #btnDISComplaint */
+        $(document).on("click", "#btnDISComplaint", function (evt) {
+            /*global activate_subpage */
+            activate_subpage("#displayComplaint");
+            return false;
+        });
+
+        /* button  #btnMissItem */
+        $(document).on("click", "#btnMissItem", function (evt) {
+            var xhr = new XMLHttpRequest();
+            uib_sb.toggle_sidebar($("#slidemenu"));
+            //xhr.open("GET", "data.json", false);
+            xhr.open("GET", getMissingItem, false);
+            xhr.onload = function () {
+
+                if (parseInt(xhr.status) == 200) {
+
+                    var json_string = JSON.parse(xhr.responseText);
+                    if (json_string.length > 0) {
+                        $("#ListMiss").empty();
+                        $.each(json_string, function (i, results) {
+
+                            temp = $('<li class="list-group-item justify-content-between" id="nomissitem"><a><table><tr><td style="width:20%;height:20%"><img src="' + hostGambar + results.missIMG + '" style="width:100%;">                      </td><td style="padding:0% 0% 0% 2%"><h4>Date: ' + results.missDate + '</h4></td></tr></table></a></li>');
+                            temp.click(function () {
+                                alert("DSADSADASDAS");
+                            });
+                            $("#ListMiss").append(temp);
+                        });
+
+                    }
+
+
+                }
+            };
+            xhr.send();
+            activate_subpage("#displayMissItem");
             return false;
         });
 
@@ -194,69 +328,9 @@ var missRouteP, MissDateP, MissTimeP, MissfromP;
         // Show the captured photo
         imageNode.attr('src', photo);
         /* button  #btnreport */
-        $(document).on("click", "#btnreport", function (evt) {
-            /* your code goes here */
-            bootbox.confirm({
-               title: "Comfirmation Report?",
-                message: "Do you want to submit Report",
-                buttons: {
-                    cancel: {
-                        label: '<i class="fa fa-times"></i> Cancel'
-                    },
-                    confirm: {
-                        label: '<i class="fa fa-check"></i> Confirm'
-                    }
-                },
-                callback: function (result) {
-                    missRouteP = $("#missRoute").val();
-                    MissDateP = $("#missDate").val();
-                    MissTimeP = $("#missTime").val();
-                    MissfromP = $("#missFrom").val();
-
-                    if (result === true) {
-
-                        if (missRouteP !== "" && MissDateP !== "" && MissTimeP !== "" && MissfromP !== "") {
-                            $.ajax({
-                                //Getting the url of the uploadphp from action attr of form 
-                                //this means currently selected element which is our form 
-                                url: reportMissingItem,
-
-                                //For file upload we use post request
-                                type: "POST",
-
-                                //Creating data from form 
-                                data: {
-                                    missroute: missRouteP,
-                                    missdate: MissDateP,
-                                    misstime: MissTimeP,
-                                    missfrom: MissfromP,
-                                    imej: imageData
-                                },
-
-                                //Setting these to false because we are sending a multipart request
-                                contentType: "application/x-www-form-urlencoded",
-                                cache: false,
-                                //processData: false,
-                                success: function (data) {
-                                    bootbox.alert("success report");
-                                },
-                                error: function () {}
-                            });
-
-
-                        } else {
-                            toastr.info("Please fill in Form");
-                        }
-                    }
-
-                }
-
-            });
-
-            return false;
-        });
 
     }
+
 
     // Called when a photo is successfully retrieved (photo retrieved)
     function onPhotoURISuccess(imageURI) {
@@ -272,7 +346,7 @@ var missRouteP, MissDateP, MissTimeP, MissfromP;
 
         $(document).on("click", "#btnreport", function (evt) {
             /* your code goes here */
- bootbox.confirm({
+            bootbox.confirm({
                 title: "Comfirmation Report?",
                 message: "Do you want to submit Report",
                 buttons: {
@@ -314,7 +388,7 @@ var missRouteP, MissDateP, MissTimeP, MissfromP;
                                 cache: false,
                                 //processData: false,
                                 success: function (data) {
-                                    bootbox.alert("success report");
+                                    bootbox.alert(JSON.parse(data));
                                 },
                                 error: function () {}
                             });
@@ -433,6 +507,17 @@ function userLocation() {
         infowindow.close();
     });
     usermarkers.push(marker);
+}
+
+function checkEmail(email) {
+    var filter = /^([a-zA-Z0-9_\.\-])+\@(([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,4})+$/;
+
+    if (filter.test(email)) {
+        return true;
+    } else {
+        alert('Please provide a valid email address');
+        return false;
+    }
 }
 
 function busLocation(buslat, buslng, busRoute, desLat, desLng, markerid) {
@@ -670,6 +755,16 @@ function startapp() {
         }
     };
     xhr.send();
+}
+
+function checkNumberLenght(numberMatric) {
+    numberMatric = numberMatric.length;
+    if (numberMatric == 6) {
+        return true;
+    } else {
+        alert("Please enter 6 digit");
+        return false;
+    }
 }
 
 function viewbusbyRoute(routebus) {
