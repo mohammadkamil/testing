@@ -17,6 +17,7 @@ var getlocationbyroute = host + "getLocationbyRoute.php";
 var reportMissingItem = host + "reportMissingItem.php";
 var reportComplaint = host + "reportComplaint.php";
 var getMissingItem = host + "getMissingItem.php";
+var getComplaint = host + "getComplaint.php";
 var locationBus;
 var center;
 var content;
@@ -52,7 +53,7 @@ var temp;
         //        
         startapp();
         /* button  #menu */
-        
+
         $(document).on("click", "#menu", function (evt) {
             /*global uib_sb */
             /* Other possible functions are: 
@@ -86,7 +87,7 @@ var temp;
         $(document).on("click", "#slideMissing", function (evt) {
             /*global activate_subpage */
             uib_sb.toggle_sidebar($("#slidemenu"));
-            bootbox.alert(moment().format("HH:mm"));
+
             $("#missDate").val(moment().format('YYYY-MM-DD'));
             $("#missTime").val(moment().format("HH:mm"));
             activate_subpage("#reportmissingitem");
@@ -197,7 +198,6 @@ var temp;
             }
             usermarkers[0].setMap(null);
             var routre = $("#selectRoute").val();
-            bootbox.alert(routre);
             viewbusbyRoute(routre);
             return false;
         });
@@ -240,7 +240,45 @@ var temp;
         /* button  #btnDISComplaint */
         $(document).on("click", "#btnDISComplaint", function (evt) {
             /*global activate_subpage */
-            activate_subpage("#displayComplaint");
+            uib_sb.toggle_sidebar($("#slidemenu"));
+            $.ajax({
+                //Getting the url of the uploadphp from action attr of form 
+                //this means currently selected element which is our form 
+                url: getComplaint,
+
+                //For file upload we use post request
+                type: "POST",
+
+                //Creating data from form 
+                data: {
+                    getEmail: localStorage.getItem("emailPassenger")
+
+                },
+
+                //Setting these to false because we are sending a multipart request
+                contentType: "application/x-www-form-urlencoded",
+                cache: false,
+                //processData: false,
+                success: function (data) {
+                    var complaintData = JSON.parse(data);
+                    prompt("DSADSDADASDA", data);
+                    $.each(complaintData, function (i, complaint) {
+                        $("#disComplaint").empty();
+                        temp = $('<li class="list-group-item justify-content-between" id="nocomplaint"><a><table><tbody><tr><td>Complainer </td><td>:</td><td>' + complaintData + '</td></tr><tr><td>Route</td><td>:</td><td></td></tr><tr><td>Date</td><td>:</td><td></td></tr><tr><td>Time</td><td>:</td><td></td></tr><tr><td>Complaint</td><td>:</td><td></td></tr><tr><td>Status</td><td>:</td><td></td></tr></tbody></table></a></li>');
+                        temp.click(function () {
+                            $("#missIMG").attr("src", hostGambar + results.missIMG);
+                            $("#missDetail").html("<table><tr><td>Route </td><td>: </td><td> " + results.missRoute + "</td></tr><tr><td>Date repoty </td><td>: </td><td> " + results.missDate + "</td></tr><tr><td>Time report </td><td>: </td><td> " + results.missTime + "</td></tr><tr><td>From </td><td>: </td><td> " + results.missFrom + "</td></tr></table>");
+                            activate_subpage("#missingItemDetail");
+                        });
+                        $("#disComplaint").append(temp);
+                    });
+
+
+                    activate_subpage("#displayComplaint");
+                },
+                error: function () {}
+            });
+
             return false;
         });
 
@@ -261,7 +299,9 @@ var temp;
 
                             temp = $('<li class="list-group-item justify-content-between" id="nomissitem"><a><table><tr><td style="width:20%;height:20%"><img src="' + hostGambar + results.missIMG + '" style="width:100%;">                      </td><td style="padding:0% 0% 0% 2%"><h4>Date: ' + results.missDate + '</h4></td></tr></table></a></li>');
                             temp.click(function () {
-                                alert("DSADSADASDAS");
+                                $("#missIMG").attr("src", hostGambar + results.missIMG);
+                                $("#missDetail").html("<table><tr><td>Route </td><td>: </td><td> " + results.missRoute + "</td></tr><tr><td>Date repoty </td><td>: </td><td> " + results.missDate + "</td></tr><tr><td>Time report </td><td>: </td><td> " + results.missTime + "</td></tr><tr><td>From </td><td>: </td><td> " + results.missFrom + "</td></tr></table>");
+                                activate_subpage("#missingItemDetail");
                             });
                             $("#ListMiss").append(temp);
                         });

@@ -1023,3 +1023,6 @@ label.narrow-control:empty + .wide-control {
     width: auto !important;
   }
 }
+.center {
+  allign: middle;
+}
