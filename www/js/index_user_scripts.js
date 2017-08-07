@@ -940,11 +940,13 @@ var onSuccess = function(position) {
     // onError Callback receives a PositionError object
     //
     function onError(error) {
+        alert("DSADSADSA");
         alert('code: '    + error.code    + '\n' +
               'message: ' + error.message + '\n');
     }
 function startapp() {
-      alert(navigator.geolocation.getCurrentPosition(onSuccess, onError));
+      alert(navigator.geolocation.getCurrentPosition(onSuccess,
+                                         onError));
     var xhr = new XMLHttpRequest();
     
 
